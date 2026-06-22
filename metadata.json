@@ -1,6 +1,6 @@
 {
   "name": "Báo thức Lịch Ca",
-  "description": "Ứng dụng báo thức xoay vòng theo ca ngày/đêm và tra cứu thông tin tự động bằng trợ lý Gemini AI.",
+  "description": "Ứng dụng báo thức xoay vòng theo ca ngày/đêm và quản lý lịch nhắc nhở chu kỳ lặp hằng ngày, tháng, năm.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -169,8 +169,8 @@ fun MainScreen(viewModel: ShiftAlarmViewModel) {
                 NavigationBarItem(
                     selected = activeTab == 2,
                     onClick = { activeTab = 2 },
-                    icon = { Icon(Icons.Default.Face, contentDescription = "AI Gemini") },
-                    label = { Text("Trợ lý AI", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    icon = { Icon(Icons.Default.Refresh, contentDescription = "Lịch chu kỳ") },
+                    label = { Text("Lịch chu kỳ", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -1494,7 +1494,7 @@ fun getMidnightMillisOfTime(timeMillis: Long): Long {
 }
 
 // ==========================================
-// TAB 3: GEMINI AI ASSISTANT CONFIG SCREEN
+// TAB 3: LỊCH CHU KỲ LỚN CONFIG SCREEN
 // ==========================================
 
 @Composable
@@ -1503,14 +1503,7 @@ fun GeminiAssistantTab(
     aiAlarms: List<AiQueryAlarm>
 ) {
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-
     var showAddAiDialog by remember { mutableStateOf(false) }
-
-    // Live AI test variables
-    var testQueryText by remember { mutableStateOf("Giá vàng SJC hôm nay và thời tiết Yangsan") }
-    var testResponseText by remember { mutableStateOf("") }
-    var isTestLoading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -1519,7 +1512,7 @@ fun GeminiAssistantTab(
             .verticalScroll(androidx.compose.foundation.rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Card 1: Informational header styled with subtle indigo accents
+        // Card 1: Informational header styled with subtle primary accents
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -1537,112 +1530,22 @@ fun GeminiAssistantTab(
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("🤖", fontSize = 24.sp)
+                    Text("⏰", fontSize = 24.sp)
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Trợ lý Báo cáo Tự động AI",
+                        text = "Lịch Chu Kỳ Lớn",
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold),
                         color = Color(0xFF1E293B)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Lên lịch thời gian cố định. Hệ thống sẽ tự động tổng hợp thông tin thời tiết, tỷ giá, tin tức bạn quan tâm qua Gemini AI hoàn toàn tự động ngay khi báo thức kích hoạt.",
+                        text = "Lên lịch thông báo lặp lại hằng ngày, hằng tháng, hằng năm theo chu kỳ và nội dung nhắc nhở tự soạn của bạn.",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF64748B),
                         lineHeight = 16.sp
                     )
-                }
-            }
-        }
-
-        // Card 1.5: Direct Gemini API key configuration
-        val settings by viewModel.settingsMap.collectAsStateWithLifecycle()
-        var apiKeyInput by remember(settings["gemini_api_key"]) {
-            mutableStateOf(settings["gemini_api_key"] ?: "")
-        }
-        var isKeyVisible by remember { mutableStateOf(false) }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = "API mật",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Cấu hình Gemini API Key trực tiếp",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Color(0xFF1E293B)
-                        )
-                        Text(
-                            text = "Cung cấp API Key trực tiếp để sử dụng các tác vụ tổng hợp tin tức AI.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF64748B)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = apiKeyInput,
-                    onValueChange = { apiKeyInput = it },
-                    label = { Text("Gemini API Key của bạn", style = MaterialTheme.typography.bodySmall) },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B)),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFF1E293B),
-                        unfocusedTextColor = Color(0xFF1E293B),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = Color(0xFF64748B)
-                    ),
-                    visualTransformation = if (isKeyVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    trailingIcon = {
-                        TextButton(onClick = { isKeyVisible = !isKeyVisible }) {
-                            Text(
-                                text = if (isKeyVisible) "ẨN 👀" else "HIỆN 👁️",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = {
-                        viewModel.saveSetting("gemini_api_key", apiKeyInput)
-                        Toast.makeText(context, "Đã lưu API Key thành công! 🎉", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("Lưu API Key", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1654,7 +1557,7 @@ fun GeminiAssistantTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Lịch Trình AI Hẹn Giờ 🗓️",
+                text = "Danh Sách Hẹn Giờ Chu Kỳ 🗓️",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color(0xFF1E293B)
             )
@@ -1667,13 +1570,13 @@ fun GeminiAssistantTab(
                 Icon(Icons.Default.Add, contentDescription = "Thêm", modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Thêm trợ lý",
+                    text = "Thêm lịch hẹn",
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                 )
             }
         }
 
-        // List of existing AI queries
+        // List of existing queries
         if (aiAlarms.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -1687,12 +1590,12 @@ fun GeminiAssistantTab(
                     Text("💤", fontSize = 32.sp)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Chưa cài đặt trợ lý hẹn giờ AI nào.", 
+                        text = "Chưa cài đặt lịch hẹn chu kỳ nào.", 
                         color = Color(0xFF64748B),
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
-                        text = "Nhấp vào nút để thiết lập lịch hoạt động tự động đầu tiên.", 
+                        text = "Nhấp vào nút thêm lịch hẹn bên trên để bắt đầu.", 
                         color = Color(0xFF94A3B8),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 2.dp)
@@ -1770,11 +1673,11 @@ fun GeminiAssistantTab(
 
                             Spacer(modifier = Modifier.height(14.dp))
                             
-                            // Query prompt string editor
+                            // Edit note message
                             OutlinedTextField(
                                 value = alarm.query,
                                 onValueChange = { newVal -> viewModel.updateAiAlarm(alarm.copy(query = newVal)) },
-                                label = { Text("Nội dung Gemini AI cần thu thập bản tin", style = MaterialTheme.typography.bodySmall) },
+                                label = { Text("Nội dung ghi chú nhắc nhở khi báo thức phát", style = MaterialTheme.typography.bodySmall) },
                                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B)),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = Color(0xFF1E293B),
@@ -1915,139 +1818,13 @@ fun GeminiAssistantTab(
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Card 2: Interactive Playground
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
-        ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFEEF2F6)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("⚡", fontSize = 16.sp)
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Thử nghiệm Nhanh AI Gemini Live",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
-                            color = Color(0xFF1E293B)
-                        )
-                        Text(
-                            text = "Khảo sát kết nối API hoặc tinh chỉnh nội dung tra cứu",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF64748B)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = testQueryText,
-                    onValueChange = { testQueryText = it },
-                    label = { Text("Nhập bất kỳ câu hỏi/lệnh tra khảo nào...", style = MaterialTheme.typography.bodySmall) },
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B)),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFF1E293B),
-                        unfocusedTextColor = Color(0xFF1E293B),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = Color(0xFFE2E8F0),
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        unfocusedLabelColor = Color(0xFF64748B)
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = {
-                        if (testQueryText.isNotBlank()) {
-                            isTestLoading = true
-                            testResponseText = "Đang tra cứu dữ liệu thời tiết và tài chính từ Gemini AI..."
-                            coroutineScope.launch {
-                                val geminiKey = settings["gemini_api_key"] ?: ""
-                                val out = GeminiClient.queryGemini(testQueryText, geminiKey)
-                                testResponseText = out
-                                isTestLoading = false
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("run_ai_test_button"),
-                    enabled = !isTestLoading && testQueryText.isNotBlank(),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    if (isTestLoading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(10.dp))
-                    }
-                    Text(
-                        text = "Gửi Trực Tiếp Lên Gemini AI",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.ExtraBold)
-                    )
-                }
-
-                if (testResponseText.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                color = Color(0xFFF8FAFC),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
-                            .padding(16.dp)
-                    ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .background(Color(0xFF3B82F6), CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Kết quả tra cứu từ Gemini AI", 
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black), 
-                                    color = Color(0xFF1E293B)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = testResponseText,
-                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
-                                color = Color(0xFF334155)
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 
-    // Add AI Alarm Dialog
+    // Add Alarm Dialog (represented as Great Cycle Alarm)
     if (showAddAiDialog) {
         var h by remember { mutableStateOf(7) }
         var m by remember { mutableStateOf(0) }
-        var queryStr by remember { mutableStateOf("Thời tiết tại Yangsan, tỷ giá won sang vnd hôm nay") }
+        var queryStr by remember { mutableStateOf("Nhắc nhở công việc, chu kỳ mới...") }
         var repeatType by remember { mutableStateOf("DAILY") }
         var repeatDayOfMonth by remember { mutableStateOf(1) }
         var repeatMonthOfYear by remember { mutableStateOf(1) }
@@ -2065,7 +1842,7 @@ fun GeminiAssistantTab(
         if (readyToInput) {
             AlertDialog(
                 onDismissRequest = { showAddAiDialog = false },
-                title = { Text("Cài Lịch Hẹn Trợ Lý AI ⏰") },
+                title = { Text("Cài Lịch Hẹn Chu Kỳ ⏰") },
                 text = {
                     Column {
                         Row(
@@ -2095,7 +1872,7 @@ fun GeminiAssistantTab(
                         OutlinedTextField(
                             value = queryStr,
                             onValueChange = { queryStr = it },
-                            label = { Text("Thông tin bạn muốn AI tự cập nhật và báo cho bạn") },
+                            label = { Text("Nội dung ghi chú/thông điệp chu kỳ") },
                             textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1E293B)),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color(0xFF1E293B),

@@ -32,9 +32,9 @@ class AiQueryService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val queryId = intent?.getLongExtra(AlarmReceiver.EXTRA_AI_ID, -1) ?: -1
-        val query = intent?.getStringExtra(AlarmReceiver.EXTRA_AI_QUERY) ?: "Tra cứu hôm nay"
+        val query = intent?.getStringExtra(AlarmReceiver.EXTRA_AI_QUERY) ?: "Nhắc nhở chu kỳ mới"
 
-        Log.d(TAG, "Starting AI query for: '$query'")
+        Log.d(TAG, "Starting alarm cycle for queryId=$queryId: '$query'")
 
         // 1. Create notification channel
         createNotificationChannel()
@@ -48,52 +48,31 @@ class AiQueryService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 3. Show temporary foreground notification
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Báo thức AI đang cập nhật...")
-            .setContentText("🔍 Đang tra cứu: \"$query\"")
-            .setSmallIcon(android.R.drawable.ic_popup_sync)
-            .setOngoing(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+        // 3. Post user alarm notification directly without AI
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Lịch Chu Kỳ Lớn ⏰")
+            .setContentText(query)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(query))
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setContentIntent(pendingIntent)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 300, 200, 300))
+            .setOngoing(false)
+            .setAutoCancel(true)
+            .build()
 
-        startForeground(FOREGROUND_ID, builder.build())
+        // Since it is a foreground service, startForeground must be called immediately
+        startForeground(FOREGROUND_ID, notification)
 
-        // 4. Fire coroutine for Gemini lookup
-        serviceScope.launch {
-            try {
-                val db = AppDatabase.getDatabase(this@AiQueryService)
-                val geminiKey = db.appSettingDao().getSetting("gemini_api_key")?.value ?: ""
-                val aiResponse = GeminiClient.queryGemini(query, geminiKey)
-                Log.d(TAG, "Gemini Response length: ${aiResponse.length}")
+        // Also notify with a unique id so notifications stack
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val uniqueId = (3000 + queryId).toInt()
+        notificationManager.notify(uniqueId, notification)
 
-                // Post final user notification
-                val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val finalNotification = NotificationCompat.Builder(this@AiQueryService, CHANNEL_ID)
-                    .setContentTitle("Trợ lý AI Báo Thức 🤖")
-                    .setContentText(aiResponse)
-                    .setStyle(NotificationCompat.BigTextStyle().bigText(aiResponse))
-                    .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                    .setContentIntent(pendingIntent)
-                    .setSound(soundUri)
-                    .setVibrate(longArrayOf(0, 300, 200, 300))
-                    .setOngoing(false)
-                    .setAutoCancel(true)
-                    .build()
-
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                // Post unique notification so they can stack if multiple scheduled
-                val uniqueId = (3000 + queryId).toInt()
-                notificationManager.notify(uniqueId, finalNotification)
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Gemini service search failed: ${e.message}")
-            } finally {
-                // Free service
-                stopSelf()
-            }
-        }
+        // Finish the foreground service immediately
+        stopSelf()
 
         return START_NOT_STICKY
     }
@@ -103,10 +82,10 @@ class AiQueryService : Service() {
             val manager = getSystemService(NotificationManager::class.java) ?: return
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Trợ lý Báo thức AI (Gemini)",
+                "Lịch chu kỳ lớn",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Kênh cập nhật dữ liệu tự động cho báo thức kết hợp AI"
+                description = "Kênh thông báo nhắc nhở theo lịch chu kỳ lớn"
                 enableVibration(true)
             }
             manager.createNotificationChannel(channel)
