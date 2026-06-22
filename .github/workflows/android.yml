@@ -33,6 +33,9 @@ jobs:
         run: |
           if [ -f debug.keystore.base64 ]; then
             base64 -d debug.keystore.base64 > debug.keystore
+            base64 -d debug.keystore.base64 > app/debug.keystore
+            mkdir -p ~/.android
+            base64 -d debug.keystore.base64 > ~/.android/debug.keystore
           else
             echo "debug.keystore.base64 not found!"
           fi
