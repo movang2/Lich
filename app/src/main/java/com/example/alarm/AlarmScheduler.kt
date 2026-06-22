@@ -81,6 +81,9 @@ object AlarmScheduler {
         
         Log.d(TAG, "Starting rescheduling...")
 
+        val globalLevelVal = db.appSettingDao().getSetting("global_alarm_level")?.value ?: "CUSTOM"
+        Log.d(TAG, "Global alarm level configuration: $globalLevelVal")
+
         // Fetch AI Alarms
         val aiAlarms = db.aiQueryAlarmDao().getEnabledAiAlarms()
 
@@ -120,6 +123,12 @@ object AlarmScheduler {
                         continue
                     }
 
+                    val resolvedLevel = if (globalLevelVal == "CUSTOM") {
+                        alarm.level
+                    } else {
+                        globalLevelVal
+                    }
+
                     // Schedule
                     val intent = Intent(context, AlarmReceiver::class.java).apply {
                         action = AlarmReceiver.ACTION_TRIGGER_SHIFT_ALARM
@@ -127,6 +136,7 @@ object AlarmScheduler {
                         putExtra(AlarmReceiver.EXTRA_ALARM_LABEL, alarm.label)
                         putExtra(AlarmReceiver.EXTRA_ALARM_RINGTONE, alarm.ringTone)
                         putExtra(AlarmReceiver.EXTRA_ALARM_VIBRATE, alarm.vibrate)
+                        putExtra(AlarmReceiver.EXTRA_ALARM_LEVEL, resolvedLevel)
                         putExtra(AlarmReceiver.EXTRA_PROFILE_NAME, activeProfile.name)
                     }
 

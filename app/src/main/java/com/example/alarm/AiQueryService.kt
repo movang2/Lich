@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.api.GeminiClient
+import com.example.data.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -61,7 +62,9 @@ class AiQueryService : Service() {
         // 4. Fire coroutine for Gemini lookup
         serviceScope.launch {
             try {
-                val aiResponse = GeminiClient.queryGemini(query)
+                val db = AppDatabase.getDatabase(this@AiQueryService)
+                val geminiKey = db.appSettingDao().getSetting("gemini_api_key")?.value ?: ""
+                val aiResponse = GeminiClient.queryGemini(query, geminiKey)
                 Log.d(TAG, "Gemini Response length: ${aiResponse.length}")
 
                 // Post final user notification

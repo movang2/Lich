@@ -17,6 +17,7 @@ class AlarmReceiver : BroadcastReceiver() {
         const val EXTRA_ALARM_LABEL = "extra_alarm_label"
         const val EXTRA_ALARM_RINGTONE = "extra_alarm_ringtone"
         const val EXTRA_ALARM_VIBRATE = "extra_alarm_vibrate"
+        const val EXTRA_ALARM_LEVEL = "extra_alarm_level"
         const val EXTRA_PROFILE_NAME = "extra_profile_name"
 
         const val EXTRA_AI_ID = "extra_ai_id"
@@ -44,6 +45,7 @@ class AlarmReceiver : BroadcastReceiver() {
             val label = intent.getStringExtra(EXTRA_ALARM_LABEL) ?: "Báo thức"
             val ringtone = intent.getStringExtra(EXTRA_ALARM_RINGTONE) ?: "Mặc định"
             val vibrate = intent.getBooleanExtra(EXTRA_ALARM_VIBRATE, true)
+            val level = intent.getStringExtra(EXTRA_ALARM_LEVEL) ?: "HIGH"
             val profileName = intent.getStringExtra(EXTRA_PROFILE_NAME) ?: "Ca"
 
             val serviceIntent = Intent(context, AlarmService::class.java).apply {
@@ -51,6 +53,7 @@ class AlarmReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_ALARM_LABEL, label)
                 putExtra(EXTRA_ALARM_RINGTONE, ringtone)
                 putExtra(EXTRA_ALARM_VIBRATE, vibrate)
+                putExtra(EXTRA_ALARM_LEVEL, level)
                 putExtra(EXTRA_PROFILE_NAME, profileName)
             }
 

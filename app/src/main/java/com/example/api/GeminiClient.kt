@@ -23,10 +23,10 @@ object GeminiClient {
 
     private const val BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
 
-    suspend fun queryGemini(userQuery: String): String = withContext(Dispatchers.IO) {
-        val apiKey = BuildConfig.GEMINI_API_KEY
+    suspend fun queryGemini(userQuery: String, keyOverride: String = ""): String = withContext(Dispatchers.IO) {
+        val apiKey = keyOverride.ifEmpty { BuildConfig.GEMINI_API_KEY }
         if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
-            return@withContext "Chưa cấu hình API Key cho Gemini AI. Hãy thêm GEMINI_API_KEY trong phần Secrets."
+            return@withContext "Chưa cấu hình API Key cho Gemini AI. Hãy nhập API Key trực tiếp trong phần Cài đặt của trợ lý AI trên ứng dụng."
         }
 
         val systemPrompt = "Bạn là trợ lý thông báo báo thức thông minh cho ca làm việc. Hãy đóng vai trò trợ lý tóm tắt hoặc chuẩn bị thông tin theo yêu cầu của người dùng bên dưới. Hãy trả lời bằng tiếng Việt cực kỳ ngắn gọn, cô đọng (khoảng 3-5 dòng, tối đa 80-120 từ), trực quan, có chứa emoji thích hợp để người dùng đọc lướt qua nhanh chóng ngay khi thức dậy trên thông báo điện thoại. " +

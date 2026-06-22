@@ -43,8 +43,9 @@ class AlarmService : Service() {
         val label = intent?.getStringExtra(AlarmReceiver.EXTRA_ALARM_LABEL) ?: "Báo thức"
         val profileName = intent?.getStringExtra(AlarmReceiver.EXTRA_PROFILE_NAME) ?: "Lịch ca"
         val vibrate = intent?.getBooleanExtra(AlarmReceiver.EXTRA_ALARM_VIBRATE, true) ?: true
+        val level = intent?.getStringExtra(AlarmReceiver.EXTRA_ALARM_LEVEL) ?: "HIGH"
 
-        Log.d(TAG, "Starting alarm sound and vibration for '$label' ($profileName)")
+        Log.d(TAG, "Starting alarm service for '$label' ($profileName) with level: $level")
 
         // 1. Create Notification Channel
         createNotificationChannel()
@@ -71,7 +72,11 @@ class AlarmService : Service() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Đặt bởi: $profileName")
-            .setContentText("⏰ $label")
+            .setContentText("⏰ $label [Chế độ: " + when(level) {
+                "LIGHT" -> "Nhẹ"
+                "MEDIUM" -> "Trung bình"
+                else -> "Cao"
+            } + "]")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -84,11 +89,13 @@ class AlarmService : Service() {
 
         startForeground(NOTIFICATION_ID, notification)
 
-        // 4. Play alarm sound
-        startSound()
+        // 4. Play alarm sound if level is MEDIUM or HIGH
+        if (level == "MEDIUM" || level == "HIGH") {
+            startSound()
+        }
 
-        // 5. Start vibration if enabled
-        if (vibrate) {
+        // 5. Start vibration if enabled and level is HIGH
+        if (vibrate && level == "HIGH") {
             startVibration()
         }
 

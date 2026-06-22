@@ -98,7 +98,7 @@ class ShiftAlarmViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     // SHIFT ALARM MANAGEMENT
-    fun addShiftAlarm(profileId: Long, dayOfWeek: Int, hour: Int, minute: Int, label: String) {
+    fun addShiftAlarm(profileId: Long, dayOfWeek: Int, hour: Int, minute: Int, label: String, level: String = "HIGH") {
         viewModelScope.launch(Dispatchers.IO) {
             val alarm = ShiftAlarm(
                 profileId = profileId,
@@ -106,7 +106,8 @@ class ShiftAlarmViewModel(application: Application) : AndroidViewModel(applicati
                 hour = hour,
                 minute = minute,
                 label = label,
-                isEnabled = true
+                isEnabled = true,
+                level = level
             )
             alarmDao.insertAlarm(alarm)
             reschedule()
@@ -151,7 +152,8 @@ class ShiftAlarmViewModel(application: Application) : AndroidViewModel(applicati
                             label = monAlarm.label,
                             isEnabled = monAlarm.isEnabled,
                             ringTone = monAlarm.ringTone,
-                            vibrate = monAlarm.vibrate
+                            vibrate = monAlarm.vibrate,
+                            level = monAlarm.level
                         )
                     )
                 }

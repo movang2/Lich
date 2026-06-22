@@ -300,6 +300,7 @@ fun ShiftAlarmsTab(
 ) {
     val context = LocalContext.current
     var showAddAlarmDialogForDay by remember { mutableStateOf<Int?>(null) } // holds dayOfWeek value
+    var showEditAlarmDialog by remember { mutableStateOf<ShiftAlarm?>(null) }
 
     Column(
         modifier = Modifier
@@ -474,11 +475,7 @@ fun ShiftAlarmsTab(
                         onAddAlarmClick = { showAddAlarmDialogForDay = weekday },
                         onAlarmToggle = { alarm -> viewModel.updateShiftAlarm(alarm.copy(isEnabled = !alarm.isEnabled)) },
                         onAlarmDelete = { alarm -> viewModel.deleteShiftAlarm(alarm) },
-                        onAlarmEdit = { alarm ->
-                            showAndroidTimePicker(context, alarm.hour, alarm.minute) { hour, minute ->
-                                viewModel.updateShiftAlarm(alarm.copy(hour = hour, minute = minute))
-                            }
-                        }
+                        onAlarmEdit = { alarm -> showEditAlarmDialog = alarm }
                     )
                 }
             }
@@ -496,6 +493,7 @@ fun ShiftAlarmsTab(
         var vibrateState by remember { mutableStateOf(true) }
         var alarmHour by remember { mutableStateOf(6) }
         var alarmMinute by remember { mutableStateOf(0) }
+        var selectedLevel by remember { mutableStateOf("HIGH") }
 
         var showTimeSet by remember { mutableStateOf(false) }
 
@@ -574,6 +572,38 @@ fun ShiftAlarmsTab(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Chế độ rung điện thoại")
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text("Mức độ báo thức:", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF64748B))
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("LIGHT" to "Nhẹ", "MEDIUM" to "Vừa", "HIGH" to "Cao").forEach { (levelKey, levelLabel) ->
+                                val isSelected = selectedLevel == levelKey
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color(0xFFF1F5F9))
+                                        .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                        .clickable { selectedLevel = levelKey }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = levelLabel,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF64748B)
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 confirmButton = {
@@ -586,7 +616,8 @@ fun ShiftAlarmsTab(
                                     dayOfWeek = targetDay,
                                     hour = alarmHour,
                                     minute = alarmMinute,
-                                    label = finalLabel
+                                    label = finalLabel,
+                                    level = selectedLevel
                                 )
                             }
                             showAddAlarmDialogForDay = null
@@ -603,6 +634,140 @@ fun ShiftAlarmsTab(
                 }
             )
         }
+    }
+
+    // Dialog for editing shift alarm
+    if (showEditAlarmDialog != null) {
+        val targetAlarm = showEditAlarmDialog!!
+        var labelText by remember { mutableStateOf(targetAlarm.label) }
+        var vibrateState by remember { mutableStateOf(targetAlarm.vibrate) }
+        var alarmHour by remember { mutableStateOf(targetAlarm.hour) }
+        var alarmMinute by remember { mutableStateOf(targetAlarm.minute) }
+        var selectedLevel by remember { mutableStateOf(targetAlarm.level) }
+
+        val contextForEdit = LocalContext.current
+
+        AlertDialog(
+            onDismissRequest = { showEditAlarmDialog = null },
+            title = { Text("Chương Trình Báo Thức [" + getVietnameseDayName(targetAlarm.dayOfWeek) + "]") },
+            text = {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
+                            .padding(16.dp)
+                            .clickable {
+                                showAndroidTimePicker(contextForEdit, alarmHour, alarmMinute) { h, m ->
+                                    alarmHour = h
+                                    alarmMinute = m
+                                }
+                            }
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Chọn giờ")
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = String.format("Thời gian: %02d:%02d", alarmHour, alarmMinute),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = labelText,
+                        onValueChange = { labelText = it },
+                        label = { Text("Nhãn báo thức") },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color(0xFF1E293B)),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFF1E293B),
+                            unfocusedTextColor = Color(0xFF1E293B),
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color(0xFFE2E8F0),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = Color(0xFF64748B)
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text("Mức độ báo thức:", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF64748B))
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("LIGHT" to "Nhẹ", "MEDIUM" to "Vừa", "HIGH" to "Cao").forEach { (levelKey, levelLabel) ->
+                            val isSelected = selectedLevel == levelKey
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color(0xFFF1F5F9))
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                    .clickable { selectedLevel = levelKey }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = levelLabel,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF64748B)
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = vibrateState,
+                            onCheckedChange = { vibrateState = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Chế độ rung điện thoại")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val finalLabel = labelText.ifBlank { "Báo thức" }
+                        viewModel.updateShiftAlarm(
+                            targetAlarm.copy(
+                                hour = alarmHour,
+                                minute = alarmMinute,
+                                label = finalLabel,
+                                vibrate = vibrateState,
+                                level = selectedLevel
+                            )
+                        )
+                        showEditAlarmDialog = null
+                    }
+                ) {
+                    Text("Lưu Thay Đổi")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditAlarmDialog = null }) {
+                    Text("Hủy")
+                }
+            }
+        )
     }
 }
 
@@ -763,8 +928,13 @@ fun WeekdayCard(
                                             tint = Color(0xFF94A3B8)
                                         )
                                     }
+                                    val levelText = when(alarm.level) {
+                                        "LIGHT" -> "Chế độ: Nhẹ ✉️"
+                                        "MEDIUM" -> "Chế độ: Vừa 🔊"
+                                        else -> "Chế độ: Cao 🔔"
+                                    }
                                     Text(
-                                        text = alarm.label,
+                                        text = "${alarm.label} • $levelText",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = if (alarm.isEnabled) Color(0xFF475569) else Color(0xFF94A3B8),
                                         maxLines = 1,
@@ -932,6 +1102,89 @@ fun AutoRotationTab(
                     color = Color(0xFF64748B),
                     lineHeight = 16.sp
                 )
+            }
+        }
+
+        // Global Alarm Level Configuration Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Cấu hình âm rung",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Chế độ Báo thức Đồng loạt",
+                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Color(0xFF1E293B)
+                        )
+                        Text(
+                            text = "Thiết lập đồng loạt cho tất cả báo thức, hoặc kế thừa chế độ riêng biệt từng báo thức",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val currentGlobalLevel = settings["global_alarm_level"] ?: "CUSTOM"
+                val levelsList = listOf(
+                    "CUSTOM" to "Tùy chỉnh riêng biệt của từng báo thức ⚙️",
+                    "LIGHT" to "Nhẹ (Chỉ gửi thông báo đẩy) ✉️",
+                    "MEDIUM" to "Vừa (Nói/Chuông thông báo) 🔊",
+                    "HIGH" to "Cao (Chuông inh ỏi + Rung điện thoại) 🔔"
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    levelsList.forEach { (levelKey, levelLabel) ->
+                        val isSelected = currentGlobalLevel == levelKey
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color(0xFFF8FAFC))
+                                .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                .clickable {
+                                    viewModel.saveSetting("global_alarm_level", levelKey)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = levelLabel,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF1E293B),
+                                modifier = Modifier.weight(1f)
+                            )
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { viewModel.saveSetting("global_alarm_level", levelKey) },
+                                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -1300,6 +1553,96 @@ fun GeminiAssistantTab(
                         color = Color(0xFF64748B),
                         lineHeight = 16.sp
                     )
+                }
+            }
+        }
+
+        // Card 1.5: Direct Gemini API key configuration
+        val settings by viewModel.settingsMap.collectAsStateWithLifecycle()
+        var apiKeyInput by remember(settings["gemini_api_key"]) {
+            mutableStateOf(settings["gemini_api_key"] ?: "")
+        }
+        var isKeyVisible by remember { mutableStateOf(false) }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = "API mật",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Cấu hình Gemini API Key trực tiếp",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+                            color = Color(0xFF1E293B)
+                        )
+                        Text(
+                            text = "Cung cấp API Key trực tiếp để sử dụng các tác vụ tổng hợp tin tức AI.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = apiKeyInput,
+                    onValueChange = { apiKeyInput = it },
+                    label = { Text("Gemini API Key của bạn", style = MaterialTheme.typography.bodySmall) },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B)),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color(0xFF1E293B),
+                        unfocusedTextColor = Color(0xFF1E293B),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color(0xFF64748B)
+                    ),
+                    visualTransformation = if (isKeyVisible) androidx.compose.ui.text.input.VisualTransformation.None else androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    trailingIcon = {
+                        TextButton(onClick = { isKeyVisible = !isKeyVisible }) {
+                            Text(
+                                text = if (isKeyVisible) "ẨN 👀" else "HIỆN 👁️",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.ExtraBold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.saveSetting("gemini_api_key", apiKeyInput)
+                        Toast.makeText(context, "Đã lưu API Key thành công! 🎉", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Lưu API Key", fontWeight = FontWeight.Bold)
                 }
             }
         }

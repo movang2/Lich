@@ -36,7 +36,8 @@ data class ShiftAlarm(
     val label: String,
     val isEnabled: Boolean = true,
     val ringTone: String = "Mặc định",
-    val vibrate: Boolean = true
+    val vibrate: Boolean = true,
+    val level: String = "HIGH" // "LIGHT", "MEDIUM", "HIGH"
 )
 
 @Entity(tableName = "ai_query_alarms")
@@ -140,7 +141,7 @@ interface AppSettingDao {
 
 @Database(
     entities = [ShiftProfile::class, ShiftAlarm::class, AiQueryAlarm::class, AppSetting::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
