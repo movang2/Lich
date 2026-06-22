@@ -87,6 +87,9 @@ interface ShiftAlarmDao {
     @Query("SELECT * FROM shift_alarms WHERE profileId = :profileId AND dayOfWeek = :dayOfWeek AND isEnabled = 1")
     suspend fun getEnabledAlarmsForProfileAndDay(profileId: Long, dayOfWeek: Int): List<ShiftAlarm>
 
+    @Query("SELECT * FROM shift_alarms")
+    suspend fun getAllShiftAlarms(): List<ShiftAlarm>
+
     @Query("SELECT * FROM shift_alarms WHERE profileId = :profileId")
     suspend fun getAlarmsForProfileList(profileId: Long): List<ShiftAlarm>
 
@@ -116,6 +119,9 @@ interface AiQueryAlarmDao {
 
     @Query("SELECT * FROM ai_query_alarms WHERE isEnabled = 1")
     suspend fun getEnabledAiAlarms(): List<AiQueryAlarm>
+
+    @Query("SELECT * FROM ai_query_alarms")
+    suspend fun getAllAiAlarmsList(): List<AiQueryAlarm>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAiAlarm(alarm: AiQueryAlarm): Long

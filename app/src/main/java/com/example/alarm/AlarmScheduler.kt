@@ -74,7 +74,7 @@ object AlarmScheduler {
         return shiftProfileDao.getProfileById(profileId)
     }
 
-    // Main routine to reschedule all alarms for the next 7 days
+    // Main routine to reschedule all alarms
     suspend fun rescheduleAllAlarms(context: Context) = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(context)
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return@withContext
@@ -84,10 +84,89 @@ object AlarmScheduler {
         val globalLevelVal = db.appSettingDao().getSetting("global_alarm_level")?.value ?: "CUSTOM"
         Log.d(TAG, "Global alarm level configuration: $globalLevelVal")
 
-        // Fetch AI Alarms
+        // 1. CANCEL ALL EXISTING ALARMS FIRST TO PREVENT DUPLICATES/ORPHANS
+        // Let's cancel all configured shift alarms
+        try {
+            val allShiftAlarms = db.shiftAlarmDao().getAllShiftAlarms()
+            for (alarm in allShiftAlarms) {
+                val intent = Intent(context, AlarmReceiver::class.java).apply {
+                    action = AlarmReceiver.ACTION_TRIGGER_SHIFT_ALARM
+                }
+                val requestCode = (100000 + alarm.id).toInt()
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                )
+                if (pendingIntent != null) {
+                    cancelAlarmSafely(alarmManager, pendingIntent)
+                    pendingIntent.cancel()
+                }
+
+                // Also cancel legacy request codes (with i = 0..7) to clean up old device states
+                for (legacyI in 0..7) {
+                    val legacyRequestCode = (100000 + alarm.id * 10 + legacyI).toInt()
+                    val legacyPI = PendingIntent.getBroadcast(
+                        context,
+                        legacyRequestCode,
+                        intent,
+                        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    if (legacyPI != null) {
+                        cancelAlarmSafely(alarmManager, legacyPI)
+                        legacyPI.cancel()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cancelling existing shift alarms: ${e.message}")
+        }
+
+        // Cancel all AI Query Alarms (Lịch chu kỳ lớn)
+        try {
+            val allAiAlarms = db.aiQueryAlarmDao().getAllAiAlarmsList()
+            for (aiAlarm in allAiAlarms) {
+                val intent = Intent(context, AlarmReceiver::class.java).apply {
+                    action = AlarmReceiver.ACTION_TRIGGER_AI_ALARM
+                }
+                val requestCode = (200000 + aiAlarm.id).toInt()
+                val pendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    requestCode,
+                    intent,
+                    PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                )
+                if (pendingIntent != null) {
+                    cancelAlarmSafely(alarmManager, pendingIntent)
+                    pendingIntent.cancel()
+                }
+
+                // Also cancel legacy AI request codes to clean up old device states
+                for (legacyI in 0..7) {
+                    val legacyRequestCode = (200000 + aiAlarm.id * 10 + legacyI).toInt()
+                    val legacyPI = PendingIntent.getBroadcast(
+                        context,
+                        legacyRequestCode,
+                        intent,
+                        PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    if (legacyPI != null) {
+                        cancelAlarmSafely(alarmManager, legacyPI)
+                        legacyPI.cancel()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error cancelling existing AI alarms: ${e.message}")
+        }
+
+        // 2. NOW, SCHEDULE ONLY THE EARLIEST UPCOMING OCCURRENCE OF EACH ENABLED ALARM
+        val scheduledShiftAlarmIds = mutableSetOf<Long>()
+        val scheduledAiAlarmIds = mutableSetOf<Long>()
+
         val aiAlarms = db.aiQueryAlarmDao().getEnabledAiAlarms()
 
-        // Loop for the next 7 days in the future (0 to 6)
         val now = Calendar.getInstance()
         val todayMidnight = getMidnightMillis(now.timeInMillis)
 
@@ -111,6 +190,10 @@ object AlarmScheduler {
             if (activeProfile != null) {
                 val alarms = db.shiftAlarmDao().getEnabledAlarmsForProfileAndDay(activeProfile.id, dayOfWeek)
                 for (alarm in alarms) {
+                    if (scheduledShiftAlarmIds.contains(alarm.id)) {
+                        continue
+                    }
+
                     val triggerCal = Calendar.getInstance()
                     triggerCal.timeInMillis = targetCal.timeInMillis
                     triggerCal.set(Calendar.HOUR_OF_DAY, alarm.hour)
@@ -140,7 +223,7 @@ object AlarmScheduler {
                         putExtra(AlarmReceiver.EXTRA_PROFILE_NAME, activeProfile.name)
                     }
 
-                    val requestCode = (100000 + alarm.id * 10 + i).toInt()
+                    val requestCode = (100000 + alarm.id).toInt()
                     val pendingIntent = PendingIntent.getBroadcast(
                         context,
                         requestCode,
@@ -149,11 +232,10 @@ object AlarmScheduler {
                     )
 
                     try {
-                        cancelAlarmSafely(alarmManager, pendingIntent)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             val info = AlarmManager.AlarmClockInfo(triggerCal.timeInMillis, pendingIntent)
                             alarmManager.setAlarmClock(info, pendingIntent)
-                            Log.d(TAG, "Scheduled alarm '${alarm.label}' on day index $i, time: ${triggerCal.time}")
+                            Log.d(TAG, "Scheduled alarm '${alarm.label}' (id=${alarm.id}) on target: ${triggerCal.time}")
                         } else {
                             alarmManager.setExactAndAllowWhileIdle(
                                 AlarmManager.RTC_WAKEUP,
@@ -161,14 +243,19 @@ object AlarmScheduler {
                                 pendingIntent
                             )
                         }
+                        scheduledShiftAlarmIds.add(alarm.id)
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to schedule alarm: ${e.message}")
                     }
                 }
             }
 
-            // B. AI Query Alarms for this day
+            // B. AI Query Alarms (Lịch chu kỳ lớn) for this day
             for (aiAlarm in aiAlarms) {
+                if (scheduledAiAlarmIds.contains(aiAlarm.id)) {
+                    continue
+                }
+
                 // Check repeating constraints for MONTHLY / YEARLY modes
                 when (aiAlarm.repeatType) {
                     "MONTHLY" -> {
@@ -206,7 +293,7 @@ object AlarmScheduler {
                     putExtra(AlarmReceiver.EXTRA_AI_QUERY, aiAlarm.query)
                 }
 
-                val requestCode = (200000 + aiAlarm.id * 10 + i).toInt()
+                val requestCode = (200000 + aiAlarm.id).toInt()
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     requestCode,
@@ -215,35 +302,36 @@ object AlarmScheduler {
                 )
 
                 try {
-                    cancelAlarmSafely(alarmManager, pendingIntent)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
                         alarmManager.setAndAllowWhileIdle(
                             AlarmManager.RTC_WAKEUP,
                             triggerCal.timeInMillis,
                             pendingIntent
                         )
-                        Log.d(TAG, "Scheduled AI Alarm index $i (non-exact) at ${triggerCal.time}")
+                        Log.d(TAG, "Scheduled AI Alarm id=${aiAlarm.id} (non-exact) at ${triggerCal.time}")
                     } else {
                         alarmManager.setExactAndAllowWhileIdle(
                             AlarmManager.RTC_WAKEUP,
                             triggerCal.timeInMillis,
                             pendingIntent
                         )
-                        Log.d(TAG, "Scheduled AI Alarm index $i (exact) at ${triggerCal.time}")
+                        Log.d(TAG, "Scheduled AI Alarm id=${aiAlarm.id} (exact) at ${triggerCal.time}")
                     }
+                    scheduledAiAlarmIds.add(aiAlarm.id)
                 } catch (e: SecurityException) {
-                    Log.w(TAG, "SecurityException: exact alarm permission denied. Falling back to non-exact AI alarm.")
+                    Log.w(TAG, "SecurityException: exact alarm permission denied. Falling back to non-exact.")
                     try {
                         alarmManager.setAndAllowWhileIdle(
                             AlarmManager.RTC_WAKEUP,
                             triggerCal.timeInMillis,
                             pendingIntent
                         )
+                        scheduledAiAlarmIds.add(aiAlarm.id)
                     } catch (ex: Exception) {
-                        Log.e(TAG, "Failed to schedule fallback non-exact AI alarm: ${ex.message}")
+                        Log.e(TAG, "Failed to schedule fallback non-exact Alarm: ${ex.message}")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to schedule AI alarm: ${e.message}")
+                    Log.e(TAG, "Failed to schedule Alarm: ${e.message}")
                 }
             }
         }
