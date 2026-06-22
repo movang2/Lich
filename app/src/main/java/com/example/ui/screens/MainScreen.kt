@@ -1980,7 +1980,8 @@ fun GeminiAssistantTab(
                             isTestLoading = true
                             testResponseText = "Đang tra cứu dữ liệu thời tiết và tài chính từ Gemini AI..."
                             coroutineScope.launch {
-                                val out = GeminiClient.queryGemini(testQueryText)
+                                val geminiKey = settings["gemini_api_key"] ?: ""
+                                val out = GeminiClient.queryGemini(testQueryText, geminiKey)
                                 testResponseText = out
                                 isTestLoading = false
                             }
