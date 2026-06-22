@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Centered bold alarm clock in Material design -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26c14.36,0 26,11.64 26,26s-11.64,26 -26,26 -26,-11.64 -26,-26 11.64,-26 26,-26zM54,32c-11.05,0 -20,8.95 -20,20s8.95,20 20,20 20,-8.95 20,-20 -8.95,-20 -20,-20z" />
+    
+    <!-- Clock Hands (indicating alarm setup) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,38h4v15h10v4h-14z" />
+        
+    <!-- Alarm legs / supports -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,75l6,6l-8,8l-6,-6zM82,75l8,8l-6,6l-8,-8z" />
+
+    <!-- Alarm bells -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,32a10,10 0,0 1 14,-3l-4,-6a14,14 0,0 0 -20,5zM71,29a10,10 0,0 1 14,3l10,-6a14,14 0,0 0 -24,3z" />
+
+    <!-- Gemini AI Sparkle Star (top right) -->
+    <path
+        android:fillColor="#FFF176"
+        android:pathData="M84,18l2.5,5.5l5.5,2.5l-5.5,2.5l-2.5,5.5l-2.5,-5.5l-5.5,-2.5l5.5,-2.5z" />
+    <path
+        android:fillColor="#FFF176"
+        android:pathData="M20,15l1.5,3.5l3.5,1.5l-3.5,1.5l-1.5,3.5l-1.5,-3.5l-3.5,-1.5l3.5,-1.5z" />
+</vector>
